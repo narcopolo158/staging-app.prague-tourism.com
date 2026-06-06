@@ -1,0 +1,105 @@
+--- vh/code/voucher.php	2026-06-03 18:58:29.000000000 +0000
++++ vwork/code/voucher.php	2026-06-03 19:37:13.024166705 +0000
+@@ -127,6 +127,7 @@
+ /* palette (per design review) */
+ $RED=[227,30,36]; $INK=[17,24,39]; $MUT=[107,114,128]; $SURF=[250,248,244]; $BORD=[231,226,216];
+ $WHITE=[255,255,255]; $OK=[17,138,78]; $OKBG=[224,242,231]; $WARNBG=[255,246,216]; $WARNLINE=[233,210,140];
++$GOLD=[184,137,58]; $GOLDL=[214,176,120];   // brand gold (foil accents / icons / flourishes)
+ 
+ class PtiPDF extends tFPDF {
+   function RoundedRect($x,$y,$w,$h,$r,$style='',$corners='1234'){
+@@ -143,10 +144,44 @@
+     $this->_out($op);
+   }
+   function _AArc($x1,$y1,$x2,$y2,$x3,$y3){$h=$this->h;$this->_out(sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c',$x1*$this->k,($h-$y1)*$this->k,$x2*$this->k,($h-$y2)*$this->k,$x3*$this->k,($h-$y3)*$this->k));}
++
++  /* ---- doplněné primitivy (perforace, guilloché, mikrotext, ikony, Code128, SetAlpha) ---- */
++  function Circle($x,$y,$r,$style=''){ $this->Ellipse($x,$y,$r,$r,$style); }
++  function Ellipse($x,$y,$rx,$ry,$style=''){
++    $op=($style=='F')?'f':(($style=='FD'||$style=='DF')?'B':'S'); $lx=4/3*(sqrt(2)-1)*$rx; $ly=4/3*(sqrt(2)-1)*$ry; $k=$this->k; $h=$this->h;
++    $this->_out(sprintf('%.2F %.2F m %.2F %.2F %.2F %.2F %.2F %.2F c',($x+$rx)*$k,($h-$y)*$k,($x+$rx)*$k,($h-($y-$ly))*$k,($x+$lx)*$k,($h-($y-$ry))*$k,$x*$k,($h-($y-$ry))*$k));
++    $this->_out(sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c',($x-$lx)*$k,($h-($y-$ry))*$k,($x-$rx)*$k,($h-($y-$ly))*$k,($x-$rx)*$k,($h-$y)*$k));
++    $this->_out(sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c',($x-$rx)*$k,($h-($y+$ly))*$k,($x-$lx)*$k,($h-($y+$ry))*$k,$x*$k,($h-($y+$ry))*$k));
++    $this->_out(sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c',($x+$lx)*$k,($h-($y+$ry))*$k,($x+$rx)*$k,($h-($y+$ly))*$k,($x+$rx)*$k,($h-$y)*$k));
++    $this->_out($op);
++  }
++  function PerfLine($x1,$x2,$y,$dash=1.3,$gap=1.3,$lw=0.3){ $this->SetLineWidth($lw); $x=$x1; while($x<$x2){ $xe=min($x+$dash,$x2); $this->Line($x,$y,$xe,$y); $x=$xe+$gap; } }
++  function Guilloche($cx,$cy,$R,$rgb,$a=5,$b=4,$steps=240,$lw=0.1){ $this->SetDrawColor($rgb[0],$rgb[1],$rgb[2]); $this->SetLineWidth($lw); $px=null;$py=null;
++    for($i=0;$i<=$steps;$i++){ $t=2*M_PI*$i/$steps; $rr=$R*(0.72+0.28*cos($b*$t)); $x=$cx+$rr*cos($a*$t); $y=$cy+$rr*sin($a*$t); if($px!==null)$this->Line($px,$py,$x,$y); $px=$x;$py=$y; } }
++  function MicrotextFrame($x,$y,$w,$h,$text,$rgb,$size=3.0){ $this->SetFont('Mono','',$size); $this->SetTextColor($rgb[0],$rgb[1],$rgb[2]);
++    $rep=str_repeat($text.'  ',220); $this->SetXY($x,$y-1.2); $this->Cell($w,3,substr($rep,0,(int)($w*1.6)),0,0,'L'); $this->SetXY($x,$y+$h-1.6); $this->Cell($w,3,substr($rep,0,(int)($w*1.6)),0,0,'L');
++    $n=(int)($h/2.3); $ch=str_repeat('PRAGUE TOURIST INFO  ',40); for($i=0;$i<$n;$i++){ $c=$ch[$i % strlen($ch)]; $this->SetXY($x-0.4,$y+$i*2.3); $this->Cell(2,2.3,$c,0,0,'C'); $this->SetXY($x+$w-1.6,$y+$i*2.3); $this->Cell(2,2.3,$c,0,0,'C'); } }
++  function IconCalendar($x,$y,$s,$c){ $this->SetDrawColor($c[0],$c[1],$c[2]);$this->SetLineWidth(0.3); $this->RoundedRect($x,$y+0.15*$s,$s,$s*0.85,0.4,'D'); $this->Line($x,$y+0.38*$s,$x+$s,$y+0.38*$s); $this->Line($x+0.28*$s,$y,$x+0.28*$s,$y+0.22*$s); $this->Line($x+0.72*$s,$y,$x+0.72*$s,$y+0.22*$s); }
++  function IconUsers($x,$y,$s,$c){ $this->SetDrawColor($c[0],$c[1],$c[2]);$this->SetLineWidth(0.3); $this->Circle($x+0.32*$s,$y+0.3*$s,0.16*$s,'D'); $this->RoundedRect($x+0.12*$s,$y+0.5*$s,0.4*$s,0.45*$s,0.18*$s,'D'); $this->Circle($x+0.7*$s,$y+0.34*$s,0.13*$s,'D'); }
++  function IconClock($x,$y,$s,$c){ $this->SetDrawColor($c[0],$c[1],$c[2]);$this->SetLineWidth(0.3); $this->Circle($x+0.5*$s,$y+0.5*$s,0.42*$s,'D'); $this->Line($x+0.5*$s,$y+0.5*$s,$x+0.5*$s,$y+0.24*$s); $this->Line($x+0.5*$s,$y+0.5*$s,$x+0.7*$s,$y+0.56*$s); }
++  function IconGlobe($x,$y,$s,$c){ $this->SetDrawColor($c[0],$c[1],$c[2]);$this->SetLineWidth(0.3); $this->Circle($x+0.5*$s,$y+0.5*$s,0.42*$s,'D'); $this->Ellipse($x+0.5*$s,$y+0.5*$s,0.18*$s,0.42*$s,'D'); $this->Line($x+0.08*$s,$y+0.5*$s,$x+0.92*$s,$y+0.5*$s); }
++  public $c128=['212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','233111','200000'];
++  function Code128($x,$y,$code,$w,$h){ $kB=' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'.chr(127);
++    $d=[]; for($i=0;$i<strlen($code);$i++){ $p=strpos($kB,$code[$i]); if($p===false)continue; $d[]=$p; } $sum=104; foreach($d as $k=>$v){ $sum+=$v*($k+1); } $d[]=$sum%103; $d[]=106; $d[]=107; array_unshift($d,104);
++    $mods=0; foreach($d as $v){ $s=$this->c128[$v]; for($j=0;$j<6;$j++)$mods+=(int)$s[$j]; } $mw=$w/$mods; $cur=$x; $this->SetFillColor(0,0,0);
++    foreach($d as $v){ $s=$this->c128[$v]; for($j=0;$j<6;$j++){ $bw=(int)$s[$j]*$mw; if($bw>0 && $j%2===0)$this->Rect($cur,$y,$bw,$h,'F'); $cur+=$bw; } } }
++  public $extgstates=[];
++  function SetAlpha($alpha,$bm='Normal'){ $gs=$this->AddExtGState(['ca'=>$alpha,'CA'=>$alpha,'BM'=>'/'.$bm]); $this->SetExtGState($gs); }
++  function AddExtGState($p){ $n=count($this->extgstates)+1; $this->extgstates[$n]['parms']=$p; return $n; }
++  function SetExtGState($gs){ $this->_out(sprintf('/GS%d gs',$gs)); }
++  protected function _enddoc(){ if(!empty($this->extgstates) && $this->PDFVersion<'1.4') $this->PDFVersion='1.4'; parent::_enddoc(); }
++  protected function _putextgstates(){ for($i=1;$i<=count($this->extgstates);$i++){ $this->_newobj(); $this->extgstates[$i]['n']=$this->n; $this->_put('<</Type /ExtGState'); $p=$this->extgstates[$i]['parms']; $this->_put(sprintf('/ca %.3F',$p['ca'])); $this->_put(sprintf('/CA %.3F',$p['CA'])); $this->_put('/BM '.$p['BM']); $this->_put('>>'); $this->_put('endobj'); } }
++  protected function _putresources(){ $this->_putextgstates(); parent::_putresources(); }
++  protected function _putresourcedict(){ parent::_putresourcedict(); $this->_put('/ExtGState <<'); foreach($this->extgstates as $k=>$g) $this->_put('/GS'.$k.' '.$g['n'].' 0 R'); $this->_put('>>'); }
+ }
+ 
+ $pdf = new PtiPDF('P','mm','A4'); $pdf->SetAutoPageBreak(false); $pdf->SetMargins(15,14,15);
+-foreach ([['Sans','','DejaVuSans.ttf'],['Sans','B','DejaVuSans-Bold.ttf'],['Mono','','DejaVuSansMono.ttf'],['Mono','B','DejaVuSansMono-Bold.ttf']] as $f){ $pdf->AddFont($f[0],$f[1],$f[2],true); }
++foreach ([['Sans','','DejaVuSans.ttf'],['Sans','B','DejaVuSans-Bold.ttf'],['Mono','','DejaVuSansMono.ttf'],['Mono','B','DejaVuSansMono-Bold.ttf'],['Serif','','DejaVuSerif.ttf'],['Serif','B','DejaVuSerif-Bold.ttf']] as $f){ $pdf->AddFont($f[0],$f[1],$f[2],true); }
+ 
+ $tmpdir = uploads_dir().'/tmp'; if (!is_dir($tmpdir)) { @mkdir($tmpdir,0775,true); } $tmpFiles=[];
+ function qr_for(string $url): ?string { global $tmpdir,$tmpFiles; if(!is_dir($tmpdir)||!is_writable($tmpdir))return null; $f=$tmpdir.'/qr_'.bin2hex(random_bytes(5)).'.png'; try{QRcode::png($url,$f,QR_ECLEVEL_M,4,1);}catch(Throwable $e){return null;} if(!is_file($f))return null; $tmpFiles[]=$f; return $f; }
+@@ -160,6 +195,13 @@
+ 
+ $pdf->AddPage(); $W=180; $X=15;
+ 
++/* ===== 0. fixní ochranná/značková vrstva (pod obsahem) ===== */
++// mikrotext vlasový rámeček po obvodu (světle zlatý) — prémiové + mírná ochrana
++$pdf->MicrotextFrame(8,9,194,280,'PRAGUE TOURIST INFO  ·  '.(string)$sale['voucher_number'].'  ·  ',$GOLDL,3.0);
++// ghost monogram „PTI" (skutečná průhlednost přes SetAlpha) — velké, světlé, za obsahem
++$pdf->SetAlpha(0.05); tc($pdf,$RED); $pdf->SetFont('Serif','B',150); $pdf->SetXY(0,118); $pdf->Cell(210,60,'PTI',0,0,'C'); $pdf->SetAlpha(1);
++tc($pdf,$INK);
++
+ /* ===== 1. top bar: logo · paid · voucher/pin · QR ===== */
+ $mImg=PTI_BASE.'/lib/img/pti-masthead.png';
+ if (is_file($mImg)) $pdf->Image($mImg,$X,14,44);          // small brand
+@@ -171,12 +213,18 @@
+ tc($pdf,$MUT); $pdf->SetFont('Mono','',6.4); $pdf->SetXY(96,23.5); $pdf->Cell(70,3.4,strtoupper(L2('Číslo voucheru','Voucher No.')),0,2,'R');
+ tc($pdf,$INK); $pdf->SetFont('Mono','B',12.5); $pdf->SetX(96); $pdf->Cell(70,6,(string)$sale['voucher_number'],0,2,'R');
+ tc($pdf,$MUT); $pdf->SetFont('Mono','',7); $pdf->SetX(96); $pdf->Cell(70,4,($V['pin']!==''?'PIN '.$V['pin'].'    ·    ':'').L2('Vydáno','Issued').' '.date('d.m.Y',strtotime((string)$sale['created_at'])),0,0,'R');
+-dc($pdf,$BORD); $pdf->Line($X,40,$X+$W,40);
++// Code128 čísla voucheru (skenovatelné na turniketu) — v prázdné mezeře pásu (mezi logem a číslem)
++$pdf->Code128(60,29.5,(string)$sale['voucher_number'],46,6.5);
++// zlatá „foil" linka + perforace = horní útržek (pass stub) k odtržení / ukázání u check-inu
++dc($pdf,$GOLD);  $pdf->SetLineWidth(0.5); $pdf->Line($X,39.4,$X+$W,39.4);
++dc($pdf,$GOLDL); $pdf->SetLineWidth(0.2); $pdf->Line($X,40.0,$X+$W,40.0);
++dc($pdf,$BORD);  $pdf->PerfLine($X,$X+$W,41.0,1.4,1.4,0.25);
+ 
+ /* ===== 2. hero card: product + price ===== */
+ $y=44; $hh=23; fc($pdf,$SURF); dc($pdf,$BORD); $pdf->RoundedRect($X,$y,$W,$hh,3,'FD');
++$pdf->Guilloche($X+$W-15,$y+$hh/2,8.5,[222,205,176],5,4,220,0.1);  // jemná ochranná ozdoba (foil tint)
+ if($V['operator']!==''){ tc($pdf,$RED); $pdf->SetFont('Mono','B',7.5); $pdf->SetXY($X+6,$y+4); $pdf->Cell(130,3.6,strtoupper($V['operator']),0,2); }
+-tc($pdf,$INK); $pdf->SetFont('Sans','B',16); $pdf->SetXY($X+6,$y+(($V['operator']!=='')?8.5:6)); $pdf->Cell(130,9,$V['name'],0,2);
++tc($pdf,$INK); $pdf->SetFont('Serif','B',16.5); $pdf->SetXY($X+6,$y+(($V['operator']!=='')?8.2:5.7)); $pdf->Cell(130,9,$V['name'],0,2);
+ if ($seatLine !== '') { $V['info'] = $seatLine . ($V['info'] !== '' ? "\n" . $V['info'] : ''); }
+ if ($choiceLine !== '') { $V['info'] = $choiceLine . ($V['info'] !== '' ? "\n" . $V['info'] : ''); }
+ if ($addonLine !== '') { $V['info'] = $addonLine . ($V['info'] !== '' ? "\n" . $V['info'] : ''); }
+@@ -189,7 +237,12 @@
+ if($V['duration'])$tiles[]=[L2('Délka','Duration'),$V['duration']]; if($V['languages'])$tiles[]=[L2('Jazyk','Language'),$V['languages']];
+ $nT=count($tiles); $gap=3.5; $tw=($W-$gap*($nT-1))/$nT; $tx=$X;
+ foreach($tiles as $t){ fc($pdf,$WHITE); dc($pdf,$BORD); $pdf->RoundedRect($tx,$y,$tw,17,2.5,'FD');
+-  tc($pdf,$MUT);$pdf->SetFont('Mono','B',6); $pdf->SetXY($tx+3,$y+3); $pdf->MultiCell($tw-5,3,strtoupper($t[0]),0,'L');
++  $ix=$tx+$tw-7.6; $iy=$y+3; $L0=$t[0];
++  if(stripos($L0,'Datum')!==false||stripos($L0,'Date')!==false) $pdf->IconCalendar($ix,$iy,5,$GOLD);
++  elseif(stripos($L0,'Hosté')!==false||stripos($L0,'Guest')!==false) $pdf->IconUsers($ix,$iy,5,$GOLD);
++  elseif(stripos($L0,'Délka')!==false||stripos($L0,'Duration')!==false) $pdf->IconClock($ix,$iy,5,$GOLD);
++  else $pdf->IconGlobe($ix,$iy,5,$GOLD);
++  tc($pdf,$MUT);$pdf->SetFont('Mono','B',6); $pdf->SetXY($tx+3,$y+3); $pdf->MultiCell($tw-9,3,strtoupper($t[0]),0,'L');
+   tc($pdf,$INK);$pdf->SetFont('Sans','B',9.5); $pdf->SetXY($tx+3,$y+8.2); $pdf->MultiCell($tw-5,4,$t[1],0,'L'); $tx+=$tw+$gap; }
+ $y+=17+2.5;
+ // secondary line
