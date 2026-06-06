@@ -1,0 +1,21 @@
+/* ============================================================
+   FIX — cenový matrix (product.php) přetékal pod nákupní panel
+   ------------------------------------------------------------
+   Příčina: v každé buňce byla CENA + STEPPER vedle sebe
+   (.pdx-matrix td .qrow{grid-template-columns:1fr auto}). Při 3+
+   sloupcích typů návštěvníků byla tabulka širší než .pdx-maincol
+   (vedle je 330px sticky nákupní panel) → poslední „+" se ořízl
+   o hranu .pdx-matrixWrap.
+   Řešení (CSP-safe, jen vzhled): v buňce dát CENU NAD STEPPER →
+   sloupce se zúží ~2× a 3–4 typy se pohodlně vejdou; horizontální
+   scroll zůstává jako pojistka pro extrémně mnoho sloupců.
+   Vlož na KONEC app.css (scoped pod .pdx-matrix; nic nepřepisuje jinde).
+   ============================================================ */
+.pdx-matrix{ min-width:0; }                                   /* ať se tabulka smrští do maincol */
+.pdx-matrixWrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.pdx-matrix th{ text-align:center; }                          /* hlavičky typů na střed nad sloupci */
+.pdx-matrix th:first-child{ text-align:left; }                /* ZÓNA zůstává vlevo */
+.pdx-matrix td{ text-align:center; }
+.pdx-matrix .pdx-zone{ text-align:left; }
+.pdx-matrix td .qrow{ grid-template-columns:1fr; justify-items:center; gap:6px; }  /* cena NAD stepper */
+.pdx-matrix td .pdx-cellPrice{ font-size:13px; line-height:1.15; }
