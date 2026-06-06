@@ -1,0 +1,35 @@
+/* ============================================================
+   success.php — UX doladění akční lišty + stavové hlášky (nad PTI-162)
+   Scoped pod .success-wrap / .success-actions. NEMĚNÍ prvky, akce, data
+   ani třídy tlačítek — jen layout, seskupení a vzhled hlášky. CSP-safe.
+   Vlož na KONEC app.css.
+   ============================================================ */
+/* akční lišta v toku (ne sticky), vzdušná, s mezerou mezi zalomenými řádky */
+.savebar.success-actions{ position:static; bottom:auto; border-top:1px solid var(--line);
+  margin-top:14px; padding:16px 0 0; gap:10px; row-gap:10px; justify-content:flex-start; }
+
+/* logické seskupení BEZ změny DOM: „doručení" vlevo · navigace vpravo
+   (attribute selektor na „Správa prodeje" odsadí pravou skupinu; robustní
+   i když se „Poslat agentuře" nezobrazí) */
+.success-actions a[href^="/sales.php"]{ margin-left:auto; }
+
+/* drž uniformní velikosti z 162, ať řada nezubatí */
+.success-actions .btn-p,
+.success-actions .btn-wa,
+.success-actions .btn-s{ flex:0 1 auto; }
+
+/* „Nový prodej" = hlavní další krok prodejce → decentní zvýraznění (zůstává odkaz/btn-s) */
+.success-actions a[href="/"]{ border-color:var(--brand); color:var(--brand); font-weight:700; }
+.success-actions a[href="/"]:hover{ background:var(--brand-tint); color:var(--brand); }
+
+/* e-mail pole těsněji k doručovacím tlačítkům (čte se jako „zadej → pošli") */
+.success-wrap form .field{ margin-bottom:10px; }
+
+/* stavová hláška jako čistý pill s ikonou (scoped — .inline-note jinde nedotčen) */
+.success-wrap .inline-note.ok,
+.success-wrap .inline-note.err{ display:flex; align-items:center; gap:9px;
+  font-size:14px; font-weight:600; padding:12px 16px; border-radius:var(--r-md); margin:0 0 14px; }
+.success-wrap .inline-note.ok::before{ content:'\2713'; font-weight:800; font-size:15px; }
+.success-wrap .inline-note.err::before{ content:'!'; flex:none; width:18px; height:18px;
+  border-radius:50%; background:#c0392b; color:#fff; display:inline-flex; align-items:center;
+  justify-content:center; font-size:12px; font-weight:800; }
