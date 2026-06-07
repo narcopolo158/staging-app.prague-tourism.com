@@ -1,0 +1,15 @@
+# Block ALL web access to this folder (app/).
+# These files are read by PHP from disk (open_basedir allows it); they must
+# never be fetchable over HTTP. This .htaccess is self-contained and does
+# not depend on the Basic Auth .htaccess in the parent (www/) folder.
+
+# Apache 2.4
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+# Apache 2.2 fallback (harmless if 2.4)
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
